@@ -5,8 +5,13 @@ on:
     branches:
       - main
       - master
+    tags:
+      - "v*"
   pull_request:
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   package:
@@ -49,7 +54,8 @@ jobs:
       - name: Package extension
         run: |
           mkdir -p dist
-          zip -r "dist/gitlab-hook-pilot-${GITHUB_SHA}.zip" \
+          VERSION=$(node -p "JSON.parse(require('fs').readFileSync('manifest.json', 'utf8')).version")
+          zip -r "dist/gitlab-hook-pilot-v${VERSION}.zip" \
             manifest.json \
             src \
             assets \
@@ -62,3 +68,10 @@ jobs:
           name: gitlab-hook-pilot-${{ github.sha }}
           path: dist/*.zip
           if-no-files-found: error
+
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+          generate_release_notes: true
