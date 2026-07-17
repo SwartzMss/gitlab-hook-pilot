@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Webhook 设置</title>
+    <link rel="stylesheet" href="options.css">
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">GitLab Comments</p>
+        <h1>Webhook 设置</h1>
+      </header>
+      <p id="status" role="status">这些设置会自动填入 Popup。默认只启用 Comments。</p>
+      <form id="options-form">
+        <label>
+          Webhook URL
+          <input id="webhook-url" name="webhookUrl" type="url" placeholder="https://example.com/gitlab">
+        </label>
+        <label>
+          Secret Token
+          <span class="secret-field">
+            <input id="webhook-token" name="webhookToken" type="password" autocomplete="off">
+            <button id="toggle-token" class="secondary" type="button">显示</button>
+          </span>
+        </label>
+        <fieldset>
+          <legend>事件</legend>
+          <label class="check"><input id="event-comments" type="checkbox" checked> Comments</label>
+          <label class="check"><input id="event-merge-requests" type="checkbox"> Merge requests</label>
+          <label class="check"><input id="event-push" type="checkbox"> Push events</label>
+          <label class="check"><input id="event-pipeline" type="checkbox"> Pipeline events</label>
+          <label class="check"><input id="event-tag-push" type="checkbox"> Tag push events</label>
+          <label class="check"><input id="event-issues" type="checkbox"> Issues events</label>
+        </fieldset>
+        <button type="submit">保存设置</button>
+      </form>
+    </main>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

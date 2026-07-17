@@ -9,14 +9,51 @@ export function parseGitLabGroupUrl(rawUrl) {
 
   if (url.protocol !== "https:" && url.protocol !== "http:") return null;
 
-  const match = url.pathname.match(/^\/groups\/(.+?)(?:\/-\/.*)?\/?$/);
+  const groupPath = parseGroupPath(url.pathname);
+  if (groupPath) return { origin: url.origin, groupPath };
+
+  const projectContext = parseProjectContext(url.pathname);
+  return projectContext ? { origin: url.origin, ...projectContext } : { origin: url.origin, scope: "instance" };
+}
+
+function parseGroupPath(pathname) {
+  const match = pathname.match(/^\/groups\/(.+?)(?:\/-\/.*)?\/?$/);
   if (!match) return null;
 
-  const groupPath = match[1]
+  return normalizePath(match[1]);
+}
+
+function parseProjectContext(pathname) {
+  const usefulPath = pathname.split("/-/")[0];
+  const parts = normalizePath(usefulPath)?.split("/") ?? [];
+
+  if (parts.length < 2) return null;
+  if (isReservedRoot(parts[0])) return null;
+
+  return {
+    groupPath: parts.slice(0, -1).join("/"),
+    projectPath: parts.join("/")
+  };
+}
+
+function normalizePath(path) {
+  return path
     .split("/")
     .map((part) => decodeURIComponent(part))
     .filter(Boolean)
     .join("/");
+}
 
-  return groupPath ? { origin: url.origin, groupPath } : null;
+function isReservedRoot(part) {
+  return new Set([
+    "admin",
+    "api",
+    "dashboard",
+    "explore",
+    "help",
+    "profile",
+    "projects",
+    "search",
+    "users"
+  ]).has(part);
 }

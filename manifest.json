@@ -1,13 +1,19 @@
 {
   "manifest_version": 3,
-  "name": "GitLab HookPilot",
-  "version": "0.1.0",
-  "description": "Scan projects in a GitLab group before managing project webhooks in bulk.",
-  "permissions": ["activeTab"],
+  "name": "Webhook 一键配置",
+  "version": "1.0.0",
+  "description": "Scan GitLab group projects and manage project webhooks in bulk.",
+  "permissions": ["activeTab", "storage"],
   "host_permissions": ["https://*/*", "http://*/*"],
   "background": {
     "service_worker": "src/background/service-worker.js",
     "type": "module"
+  },
+  "icons": {
+    "16": "assets/icons/icon-16.png",
+    "32": "assets/icons/icon-32.png",
+    "48": "assets/icons/icon-48.png",
+    "128": "assets/icons/icon-128.png"
   },
   "content_scripts": [
     {
@@ -16,7 +22,17 @@
     }
   ],
   "action": {
+    "default_icon": {
+      "16": "assets/icons/icon-16.png",
+      "32": "assets/icons/icon-32.png",
+      "48": "assets/icons/icon-48.png",
+      "128": "assets/icons/icon-128.png"
+    },
     "default_popup": "src/popup/popup.html",
-    "default_title": "GitLab HookPilot"
+    "default_title": "Webhook 一键配置"
+  },
+  "options_ui": {
+    "page": "src/options/options.html",
+    "open_in_tab": false
   }
 }

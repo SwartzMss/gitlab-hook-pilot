@@ -1,0 +1,64 @@
+name: Package extension
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run tests
+        run: npm test
+
+      - name: Validate extension files
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+
+          const manifest = JSON.parse(fs.readFileSync("manifest.json", "utf8"));
+          const requiredFiles = [
+            manifest.background?.service_worker,
+            manifest.action?.default_popup,
+            manifest.options_ui?.page,
+            ...Object.values(manifest.icons ?? {}),
+            ...Object.values(manifest.action?.default_icon ?? {}),
+            ...(manifest.content_scripts ?? []).flatMap((script) => script.js ?? [])
+          ].filter(Boolean);
+
+          const missing = requiredFiles.filter((file) => !fs.existsSync(file));
+          if (missing.length > 0) {
+            console.error(`Missing extension files:\n${missing.join("\n")}`);
+            process.exit(1);
+          }
+          NODE
+
+      - name: Package extension
+        run: |
+          mkdir -p dist
+          zip -r "dist/gitlab-hook-pilot-${GITHUB_SHA}.zip" \
+            manifest.json \
+            src \
+            assets \
+            README.md \
+            LICENSE
+
+      - name: Upload packaged extension
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitlab-hook-pilot-${{ github.sha }}
+          path: dist/*.zip
+          if-no-files-found: error

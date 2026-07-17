@@ -3,22 +3,39 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>GitLab HookPilot</title>
+    <title>Webhook 一键配置</title>
     <link rel="stylesheet" href="popup.css">
   </head>
   <body>
     <main>
       <header>
-        <p class="eyebrow">GitLab HookPilot</p>
-        <h1>项目扫描</h1>
+        <div class="header-row">
+          <div>
+            <p class="eyebrow">GitLab Comments</p>
+            <h1>Webhook 一键配置</h1>
+          </div>
+          <button id="open-options" class="icon-button" type="button" title="设置" aria-label="设置">⚙</button>
+        </div>
       </header>
-      <p id="status" role="status">打开 GitLab Group 页面后开始扫描。</p>
-      <button id="scan" type="button">扫描当前 Group</button>
-      <section id="summary" hidden>
+      <p id="status" class="status-card" role="status">打开 GitLab 页面后开始扫描。</p>
+      <button id="scan" class="primary-action" type="button">检查可配置项目</button>
+      <section id="summary" class="panel" hidden>
         <h2 id="group-name"></h2>
         <p id="project-count"></p>
       </section>
-      <ul id="projects" aria-label="项目列表"></ul>
+      <ul id="projects" class="compact-list project-list" aria-label="项目列表"></ul>
+      <section id="webhook-result" class="panel" hidden>
+        <div class="section-heading">
+          <h2 id="webhook-title"></h2>
+          <span id="event-summary" class="event-pill">Events</span>
+        </div>
+        <p id="webhook-summary"></p>
+        <button id="apply" type="button" hidden>确认执行</button>
+        <ul id="webhook-items" class="compact-list result-list" aria-label="Webhook 变更列表"></ul>
+      </section>
+      <section id="log-panel" class="log-controls">
+        <button id="download-log" class="secondary" type="button">下载日志</button>
+      </section>
     </main>
     <script type="module" src="popup.js"></script>
   </body>

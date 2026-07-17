@@ -4,16 +4,28 @@
 
 在现有只读项目扫描 MVP 上增加 Webhook 配置、预览和批量写入能力。用户提供一个目标 Webhook 配置后，扩展在每个项目中使用 URL 精确匹配已有 Webhook：存在匹配项时完整更新，不存在时创建新项。
 
+本阶段不执行删除操作。URL 不匹配的已有 Webhook 必须保持不变。
+
+## 扫描入口
+
+用户不必必须打开 Group 页面。扩展根据当前 GitLab 页面决定扫描范围：
+
+1. Group 页面：扫描该 Group 及其嵌套 Subgroup 项目。
+2. 项目页面：优先扫描项目所在 namespace 对应的 Group；如果 namespace 不是 Group，则只扫描当前项目。
+3. 普通 GitLab 页面：扫描当前账号参与的项目，调用 `/api/v4/projects?membership=true`。
+
+所有 API 请求只发送到当前页面识别出的 GitLab 实例 origin。
+
 ## 配置项
 
 Popup 提供以下配置：
 
 - Webhook URL：必填，必须是有效的 HTTP 或 HTTPS URL。
-- Secret Token：必填，仅保留在当前 Popup 运行期间，不写入浏览器存储或日志。
-- 事件类型：至少选择一项。首批支持 Merge Request 与 Note 事件。
-- Enable SSL verification：布尔值，默认开启。
+- Secret Token：必填，可在 Popup 或 Options 中填写；与 Webhook URL 一起保存在 `chrome.storage.local`，但不得写入日志。
+- 事件类型：固定启用 Comments，对应 GitLab API 的 `note_events`。
+- SSL verification：固定关闭，界面不提供配置项。
 
-后续事件类型可以扩展 Push、Tag Push、Pipeline、Job、Deployment 和 Release，但不属于本阶段范围。
+后续事件类型可以扩展 Merge Request、Push、Tag Push、Pipeline、Job、Deployment 和 Release，但不属于本阶段范围。
 
 ## URL 匹配规则
 
@@ -77,11 +89,12 @@ PUT /api/v4/projects/:id/hooks/:hook_id
 
 - `url`
 - `token`
-- `merge_requests_events`
 - `note_events`
 - `enable_ssl_verification`
 
-未选择的受支持事件明确发送 `false`，确保现有配置被目标配置覆盖。扩展不改变本阶段尚未提供的事件类型；实现时必须保留已有 Hook 上这些事件字段的值，避免意外关闭用户未在界面中管理的事件。
+Comments 固定发送 `note_events: true`，Merge Request 固定发送 `merge_requests_events: false`。当前目标是 Comments-only，因此常见非 Comments 事件会在创建和更新时显式发送 `false`。
+
+Push events 固定关闭，发送 `push_events: false`、空的 `push_events_branch_filter` 和 `branch_filter_strategy: "wildcard"`，避免 GitLab 默认启用 Push events。
 
 ## 执行模型
 
@@ -113,8 +126,8 @@ PUT /api/v4/projects/:id/hooks/:hook_id
 
 ## 安全约束
 
-- Secret Token 仅存在于当前 Popup 和写入消息所需的内存中。
-- 不将 Secret Token 保存到 `chrome.storage`、日志、错误对象或执行结果。
+- Secret Token 可保存到 `chrome.storage.local`，与 Webhook URL 同等处理。
+- 不将 Secret Token 写入日志、错误对象或执行结果。
 - 写入前展示影响范围并要求确认。
 - 仅操作当前扫描实例与 Group 中的项目。
 - 不修改 URL 不匹配的 Webhook。
@@ -125,11 +138,11 @@ PUT /api/v4/projects/:id/hooks/:hook_id
 
 测试至少覆盖：
 
-- 配置必填项、URL 和事件选择验证
+- 配置必填项和 URL 验证
 - URL 字符串精确匹配，包括大小写、末尾斜线和 Query String 差异
 - 零个、一个和多个匹配项的执行计划
 - 匹配项始终进入更新队列
-- 未受界面管理的事件字段在更新时得到保留
+- 创建和更新时 Push events 保持关闭
 - POST 与 PUT 请求体字段映射
 - HTTP 错误分类且错误内容不泄露 Secret
 - 有限并发下单个项目失败不影响其他项目
@@ -152,7 +165,7 @@ PUT /api/v4/projects/:id/hooks/:hook_id
 - 删除 Webhook
 - 自动定时同步
 - 后台持久化任务
-- 保存 Secret Token
+- 将 Secret Token 发送到第三方服务
 - 结果导出
 - Webhook 连通性测试
 - 自动重试
