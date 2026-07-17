@@ -3,7 +3,7 @@
   "name": "GitLab HookPilot",
   "version": "0.1.0",
   "description": "Scan projects in a GitLab group before managing project webhooks in bulk.",
-  "permissions": ["activeTab", "scripting"],
+  "permissions": ["activeTab"],
   "host_permissions": ["https://*/*", "http://*/*"],
   "background": {
     "service_worker": "src/background/service-worker.js",
