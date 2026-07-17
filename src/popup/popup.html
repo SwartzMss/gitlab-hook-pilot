@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>GitLab HookPilot</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">GitLab HookPilot</p>
+        <h1>项目扫描</h1>
+      </header>
+      <p id="status" role="status">打开 GitLab Group 页面后开始扫描。</p>
+      <button id="scan" type="button">扫描当前 Group</button>
+      <section id="summary" hidden>
+        <h2 id="group-name"></h2>
+        <p id="project-count"></p>
+      </section>
+      <ul id="projects" aria-label="项目列表"></ul>
+    </main>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
