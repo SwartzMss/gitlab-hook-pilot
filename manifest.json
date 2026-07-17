@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "GitLab HookPilot",
+  "version": "0.1.0",
+  "description": "Scan projects in a GitLab group before managing project webhooks in bulk.",
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": ["https://*/*", "http://*/*"],
+  "background": {
+    "service_worker": "src/background/service-worker.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*/*", "http://*/*"],
+      "js": ["src/content/content-script.js"]
+    }
+  ],
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_title": "GitLab HookPilot"
+  }
+}
