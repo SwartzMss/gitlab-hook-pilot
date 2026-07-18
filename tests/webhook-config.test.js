@@ -7,7 +7,7 @@ import {
   validateWebhookConfig
 } from "../src/core/webhook-config.js";
 
-test("requires URL and token", () => {
+test("requires URL", () => {
   assert.equal(validateWebhookConfig({
     url: "",
     token: "secret",
@@ -18,7 +18,7 @@ test("requires URL and token", () => {
     url: "https://hooks.example.com/gitlab",
     token: "",
     enableSslVerification: true
-  }).ok, false);
+  }).ok, true);
 });
 
 test("requires at least one event", () => {
@@ -87,6 +87,16 @@ test("maps only comments and disables other managed events", () => {
     releases_events: false,
     enable_ssl_verification: true
   });
+});
+
+test("omits blank token from the webhook payload", () => {
+  const payload = buildHookPayload({
+    url: "https://hooks.example.com/gitlab",
+    token: "",
+    enableSslVerification: true
+  });
+
+  assert.equal(Object.hasOwn(payload, "token"), false);
 });
 
 test("maps selected common events", () => {

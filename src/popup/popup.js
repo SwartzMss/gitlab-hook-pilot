@@ -124,10 +124,10 @@ async function previewWebhookChanges() {
   const config = await loadDefaults();
   resetWebhookResult();
 
-  if (!config.url || !config.token) {
+  if (!config.url) {
     webhookResult.hidden = false;
     webhookTitle.textContent = "需要设置";
-    webhookSummary.textContent = "请点击右上角设置，填写 Webhook URL 和 Secret Token 后重新扫描。";
+    webhookSummary.textContent = "请点击右上角设置，填写 Webhook URL 后重新扫描。Secret Token 可选。";
     eventSummary.textContent = describeSelectedEvents(config.events);
     status.textContent = "缺少 Webhook 设置。";
     addLog("缺少 Webhook 设置，跳过预览。", {
@@ -142,7 +142,7 @@ async function previewWebhookChanges() {
     url: config.url,
     events: describeSelectedEvents(config.events),
     ssl: false,
-    hasToken: true
+    hasToken: Boolean(config.token)
   });
 
   try {
@@ -205,8 +205,8 @@ applyButton.addEventListener("click", async () => {
   applyButton.disabled = true;
   const currentConfig = await loadDefaults();
 
-  if (!currentConfig.url || !currentConfig.token) {
-    status.textContent = "缺少 Webhook 设置，请先填写 Webhook URL 和 Secret Token。";
+  if (!currentConfig.url) {
+    status.textContent = "缺少 Webhook 设置，请先填写 Webhook URL。";
     addLog("执行前发现 Webhook 设置缺失。", {
       hasUrl: Boolean(currentConfig.url),
       hasToken: Boolean(currentConfig.token)

@@ -98,6 +98,26 @@ test("creates and updates project hooks with form-encoded fields and optional CS
   assert.equal(calls[1].options.headers["X-CSRF-Token"], undefined);
 });
 
+test("does not encode omitted token fields", async () => {
+  let body = "";
+  const fetchImpl = async (_url, options) => {
+    body = options.body;
+    return {
+      ok: true,
+      json: async () => ({ id: 1 })
+    };
+  };
+
+  await createProjectHook(
+    "https://gitlab.example.com",
+    123,
+    { url: "https://hooks.example.com/gitlab", note_events: true },
+    fetchImpl
+  );
+
+  assert.doesNotMatch(body, /token=/);
+});
+
 test("loads and merges every project hook page", async () => {
   const calls = [];
   const fetchImpl = async (url) => {

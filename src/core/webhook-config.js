@@ -29,10 +29,6 @@ export function validateWebhookConfig(config) {
     return validationError("Webhook URL 必须使用 HTTP 或 HTTPS。");
   }
 
-  if (!config.token) {
-    return validationError("Secret Token 不能为空。");
-  }
-
   const events = normalizeEvents(config.events);
   if (!Object.values(events).some(Boolean)) {
     return validationError("至少选择一种事件。");
@@ -42,7 +38,7 @@ export function validateWebhookConfig(config) {
     ok: true,
     config: {
       url: config.url,
-      token: config.token,
+      token: config.token ?? "",
       events,
       enableSslVerification: config.enableSslVerification === true
     }
@@ -53,7 +49,6 @@ export function buildHookPayload(config, existingHook = null) {
   const events = normalizeEvents(config.events);
   const payload = {
     url: config.url,
-    token: config.token,
     merge_requests_events: events.mergeRequests,
     note_events: events.comments,
     push_events: events.push,
@@ -69,6 +64,10 @@ export function buildHookPayload(config, existingHook = null) {
     releases_events: false,
     enable_ssl_verification: config.enableSslVerification === true
   };
+
+  if (config.token) {
+    payload.token = config.token;
+  }
 
   if (!existingHook) return payload;
 
