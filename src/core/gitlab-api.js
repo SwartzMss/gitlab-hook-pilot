@@ -87,13 +87,17 @@ export async function fetchAllGroupProjects(origin, groupPath, fetchImpl = fetch
   return projects;
 }
 
-export async function fetchAllUserProjects(origin, fetchImpl = fetch) {
+export async function fetchAllUserProjects(origin, fetchImpl = fetch, options = {}) {
   const projects = [];
   let page = "1";
 
   do {
     const url = new URL(`${origin}/api/v4/projects`);
-    url.searchParams.set("membership", "true");
+    if (options.minAccessLevel != null) {
+      url.searchParams.set("min_access_level", String(options.minAccessLevel));
+    } else {
+      url.searchParams.set("membership", "true");
+    }
     url.searchParams.set("per_page", "100");
     url.searchParams.set("page", page);
 
