@@ -180,6 +180,13 @@ function badgeClass(label) {
 async function previewWebhookChanges() {
   const config = await loadDefaults();
   resetWebhookResult();
+  const request = buildPreviewRequest(scannedProjects, selectedProjectIds, config);
+
+  if (!request.ok) {
+    status.textContent = request.error;
+    addLog("未选择项目，跳过预览。");
+    return;
+  }
 
   if (!config.url) {
     webhookResult.hidden = false;
@@ -203,8 +210,6 @@ async function previewWebhookChanges() {
   });
 
   try {
-    const request = buildPreviewRequest(scannedProjects, selectedProjectIds, config);
-    if (!request.ok) throw new Error(request.error);
     const result = await chrome.runtime.sendMessage(request.message);
     if (!result?.ok) throw new Error(result?.error?.message);
 

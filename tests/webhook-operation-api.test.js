@@ -64,3 +64,36 @@ test("falls back to a stable project label", async () => {
   await api.createProjectHook("https://gitlab.example.com", 7, payload);
   assert.equal(logs[0].details.project, "project-7");
 });
+
+test("logs create failures and update successes with their identifiers", async () => {
+  const createLogs = [];
+  const createFailure = Object.assign(new Error("禁止创建"), { status: 403 });
+  const failingApi = createWebhookOperationApi({
+    items,
+    api: { createProjectHook: async () => { throw createFailure; } },
+    logOperation: (message, details) => createLogs.push({ message, details })
+  });
+  await assert.rejects(
+    failingApi.createProjectHook("https://gitlab.example.com", 12345, payload),
+    /禁止创建/
+  );
+  assert.equal(createLogs[1].message, "create hook failed");
+  assert.equal(createLogs[1].details.project, "oxx/yy/so");
+  assert.equal(createLogs[1].details.projectId, 12345);
+  assert.equal(createLogs[1].details.status, 403);
+
+  const updateLogs = [];
+  const successfulApi = createWebhookOperationApi({
+    items,
+    api: { updateProjectHook: async () => ({ id: 20002 }) },
+    logOperation: (message, details) => updateLogs.push({ message, details })
+  });
+  await successfulApi.updateProjectHook(
+    "https://gitlab.example.com", 12345, 20002, payload
+  );
+  assert.equal(updateLogs[1].message, "update hook success");
+  assert.equal(updateLogs[1].details.project, "oxx/yy/so");
+  assert.equal(updateLogs[1].details.projectId, 12345);
+  assert.equal(updateLogs[1].details.hookId, 20002);
+  assert.equal(JSON.stringify([...createLogs, ...updateLogs]).includes("super-secret-token"), false);
+});
