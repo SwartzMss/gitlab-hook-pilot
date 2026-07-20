@@ -263,8 +263,7 @@ scanButton.addEventListener("click", async () => {
     latestOrigin = result.data.context.origin;
     addLog("扫描完成。", {
       origin: latestOrigin,
-      manageableProjects: result.data.projects.length,
-      skippedProjects: result.data.skippedProjects ?? 0
+      manageableProjects: result.data.projects.length
     });
   } catch (error) {
     const view = createErrorView(error);
