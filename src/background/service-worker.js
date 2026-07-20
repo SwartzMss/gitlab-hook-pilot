@@ -4,6 +4,7 @@ import { describeSelectedEvents } from "../core/webhook-config.js";
 import { executeWebhookPlan } from "../core/webhook-plan.js";
 import { parseGitLabGroupUrl } from "../core/gitlab-context.js";
 import { previewSelectedProjects } from "./preview-request.js";
+import { createWebhookOperationApi } from "./webhook-operation-api.js";
 
 const LOG_STORAGE_KEY = "gitlabHookPilotLogs";
 const logEntries = [];
@@ -86,39 +87,13 @@ async function applyWebhookChanges(items, config, origin) {
   }
 
   const page = await getActivePage();
-  const api = {
-    ...gitlabApi,
-    createProjectHook: async (projectOrigin, projectId, payload) => {
-      logOperation("create hook request", {
-        origin: projectOrigin,
-        projectId,
-        payload: sanitizePayload(payload)
-      });
-      const created = await gitlabApi.createProjectHook(projectOrigin, projectId, payload, fetch, page?.csrfToken ?? "");
-      logOperation("create hook response", {
-        origin: projectOrigin,
-        projectId,
-        hook: sanitizeHook(created)
-      });
-      return created;
-    },
-    updateProjectHook: async (projectOrigin, projectId, hookId, payload) => {
-      logOperation("update hook request", {
-        origin: projectOrigin,
-        projectId,
-        hookId,
-        payload: sanitizePayload(payload)
-      });
-      const updated = await gitlabApi.updateProjectHook(projectOrigin, projectId, hookId, payload, fetch, page?.csrfToken ?? "");
-      logOperation("update hook response", {
-        origin: projectOrigin,
-        projectId,
-        hookId,
-        hook: sanitizeHook(updated)
-      });
-      return updated;
-    }
-  };
+  const api = createWebhookOperationApi({
+    items,
+    csrfToken: page?.csrfToken ?? "",
+    fetchImpl: fetch,
+    api: gitlabApi,
+    logOperation
+  });
 
   const result = await executeWebhookPlan(items, config, api, origin);
   log("webhook apply finished", summarizeResult(result));
@@ -234,43 +209,6 @@ function sanitizeConfig(config = {}) {
     hasToken: Boolean(config.token),
     events: describeSelectedEvents(config.events),
     enableSslVerification: config.enableSslVerification
-  };
-}
-
-function sanitizePayload(payload = {}) {
-  return {
-    url: payload.url,
-    hasToken: Boolean(payload.token),
-    events: {
-      note_events: payload.note_events,
-      merge_requests_events: payload.merge_requests_events,
-      push_events: payload.push_events,
-      pipeline_events: payload.pipeline_events,
-      tag_push_events: payload.tag_push_events,
-      issues_events: payload.issues_events
-    },
-    push_events_branch_filter: payload.push_events_branch_filter,
-    branch_filter_strategy: payload.branch_filter_strategy,
-    enable_ssl_verification: payload.enable_ssl_verification
-  };
-}
-
-function sanitizeHook(hook = {}) {
-  return {
-    id: hook.id,
-    url: hook.url,
-    token_present: hook.token_present,
-    events: {
-      note_events: hook.note_events,
-      merge_requests_events: hook.merge_requests_events,
-      push_events: hook.push_events,
-      pipeline_events: hook.pipeline_events,
-      tag_push_events: hook.tag_push_events,
-      issues_events: hook.issues_events
-    },
-    push_events_branch_filter: hook.push_events_branch_filter,
-    branch_filter_strategy: hook.branch_filter_strategy,
-    enable_ssl_verification: hook.enable_ssl_verification
   };
 }
 
