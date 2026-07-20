@@ -1,3 +1,5 @@
+import { getProjectLabel } from "./project-selection.js";
+
 export function createSuccessView(data) {
   const username = data.user.name ?? data.user.username;
 
@@ -7,7 +9,7 @@ export function createSuccessView(data) {
     projectCount: `共发现 ${data.projects.length} 个可管理项目`,
     projects: data.projects.map((project) => ({
       id: project.id,
-      label: project.path_with_namespace ?? project.name,
+      label: getProjectLabel(project),
       url: project.web_url
     })),
     buttonLabel: "重新检查"
@@ -29,7 +31,7 @@ export function createPreviewView(preview) {
     summaryText: `共 ${summary.totalProjects} 个项目，待更新 ${summary.updateHooks} 个 Webhook`,
     items: preview.items.map((item) => ({
       id: item.project.id,
-      label: item.project.path_with_namespace ?? item.project.name,
+      label: getProjectLabel(item.project),
       action: previewActionLabel(item),
       okToWrite: item.action === "create" || item.action === "update",
       error: item.error?.message ?? ""
@@ -45,7 +47,7 @@ export function createExecutionView(result) {
     summaryText: `共处理 ${summary.totalProjects} 个项目`,
     items: result.items.map((item) => ({
       id: item.project.id,
-      label: item.project.path_with_namespace ?? item.project.name,
+      label: getProjectLabel(item.project),
       action: executionStatusLabel(item),
       error: item.error?.message ?? item.hookResults?.find((hook) => !hook.ok)?.error?.message ?? ""
     }))

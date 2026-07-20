@@ -22,8 +22,17 @@
       <section id="summary" class="panel" hidden>
         <h2 id="group-name"></h2>
         <p id="project-count"></p>
+        <div id="project-controls" hidden>
+          <div class="selection-heading">
+            <label class="select-all-row"><input id="select-all" type="checkbox"> 全选</label>
+            <span id="selected-count"></span>
+          </div>
+          <label class="search-row" for="project-search">搜索项目</label>
+          <input id="project-search" type="search" placeholder="按完整 Repo 路径搜索">
+        </div>
       </section>
       <ul id="projects" class="compact-list project-list" aria-label="项目列表"></ul>
+      <button id="preview-selected" class="primary-action" type="button" hidden>预览选中项目</button>
       <section id="webhook-result" class="panel" hidden>
         <div class="section-heading">
           <h2 id="webhook-title"></h2>

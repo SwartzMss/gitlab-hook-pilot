@@ -113,13 +113,49 @@ legend {
 }
 
 input[type="url"],
-input[type="password"] {
+input[type="password"],
+input[type="search"] {
   box-sizing: border-box;
   width: 100%;
   border: 1px solid #c9c7d2;
   border-radius: 8px;
   padding: 9px 10px;
   font: inherit;
+}
+
+.selection-heading,
+.select-all-row,
+.project-check-row {
+  display: flex;
+  align-items: center;
+}
+
+.selection-heading {
+  justify-content: space-between;
+  margin-top: 10px;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.select-all-row,
+.project-check-row {
+  gap: 8px;
+  margin: 0;
+}
+
+.search-row {
+  margin: 9px 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+#selected-count {
+  color: #55545b;
+}
+
+#project-search {
+  padding: 7px 9px;
+  font-size: 13px;
 }
 
 .check {
@@ -172,7 +208,7 @@ input[type="password"] {
 }
 
 .project-list {
-  max-height: 120px;
+  max-height: 180px;
 }
 
 .result-list {

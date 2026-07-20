@@ -73,3 +73,13 @@ test("creates an execution result view without leaking token fields", () => {
   assert.equal(view.items[0].action, "部分更新成功");
   assert.equal(JSON.stringify(view).includes("token"), false);
 });
+
+test("uses project id as a final repository label fallback", () => {
+  const view = createSuccessView({
+    user: { username: "river" },
+    group: { full_name: "当前账号项目" },
+    projects: [{ id: 42, web_url: "https://gitlab.example.com/project/42" }]
+  });
+
+  assert.equal(view.projects[0].label, "project-42");
+});

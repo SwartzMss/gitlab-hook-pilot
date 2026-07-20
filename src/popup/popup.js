@@ -5,6 +5,19 @@ import {
   createSuccessView
 } from "./popup-view.js";
 import { describeSelectedEvents } from "../core/webhook-config.js";
+import {
+  createProjectIdSnapshot,
+  createSelectedProjectIds,
+  filterProjects,
+  getProjectLabel,
+  getSelectedProjects,
+  getSelectionState
+} from "./project-selection.js";
+import {
+  buildPreviewRequest,
+  invalidatePreviewState,
+  validateApplySelection
+} from "./popup-selection-flow.js";
 
 const scanButton = document.querySelector("#scan");
 const openOptionsButton = document.querySelector("#open-options");
@@ -13,6 +26,11 @@ const summary = document.querySelector("#summary");
 const groupName = document.querySelector("#group-name");
 const projectCount = document.querySelector("#project-count");
 const projectList = document.querySelector("#projects");
+const projectControls = document.querySelector("#project-controls");
+const selectAll = document.querySelector("#select-all");
+const selectedCount = document.querySelector("#selected-count");
+const projectSearch = document.querySelector("#project-search");
+const previewSelectedButton = document.querySelector("#preview-selected");
 const webhookResult = document.querySelector("#webhook-result");
 const webhookTitle = document.querySelector("#webhook-title");
 const webhookSummary = document.querySelector("#webhook-summary");
@@ -25,6 +43,9 @@ let latestPreview = null;
 let latestOrigin = "";
 let latestConfig = null;
 let latestPreviewUrl = "";
+let scannedProjects = [];
+let selectedProjectIds = new Set();
+let latestPreviewProjectIds = [];
 const logEntries = [];
 
 loadDefaults();
@@ -33,12 +54,19 @@ addLog("Popup 已打开。");
 function resetResults() {
   summary.hidden = true;
   projectList.replaceChildren();
+  scannedProjects = [];
+  selectedProjectIds = new Set();
+  latestPreviewProjectIds = [];
+  projectControls.hidden = true;
+  previewSelectedButton.hidden = true;
+  projectSearch.value = "";
   latestOrigin = "";
   resetWebhookResult();
 }
 
 function resetWebhookResult() {
   latestPreview = null;
+  latestPreviewProjectIds = [];
   latestPreviewUrl = "";
   webhookResult.hidden = true;
   applyButton.hidden = true;
@@ -53,18 +81,47 @@ function renderProjects(view) {
   projectCount.textContent = view.projectCount;
   scanButton.textContent = view.buttonLabel;
 
-  projectList.replaceChildren(...view.projects.map((project) => {
+  renderProjectRows();
+}
+
+function renderProjectRows() {
+  const visibleProjects = filterProjects(scannedProjects, projectSearch.value);
+  projectList.replaceChildren(...visibleProjects.map((project) => {
     const item = document.createElement("li");
     item.className = "list-row";
+    const row = document.createElement("label");
+    row.className = "project-check-row";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = selectedProjectIds.has(String(project.id));
+    checkbox.dataset.projectId = String(project.id);
     const link = document.createElement("a");
-    link.href = project.url;
+    link.href = project.web_url;
     link.target = "_blank";
     link.rel = "noreferrer";
     link.className = "row-title";
-    link.textContent = project.label;
-    item.append(link);
+    link.textContent = getProjectLabel(project);
+    row.append(checkbox, link);
+    item.append(row);
     return item;
   }));
+  updateSelectionSummary();
+}
+
+function updateSelectionSummary() {
+  const state = getSelectionState(selectedProjectIds, scannedProjects.length);
+  selectAll.checked = state.checked;
+  selectAll.indeterminate = state.indeterminate;
+  selectedCount.textContent = `已选择 ${state.selectedCount} / ${state.totalCount}`;
+}
+
+function invalidatePreviewForSelectionChange() {
+  const invalidated = invalidatePreviewState(latestPreview, latestPreviewProjectIds);
+  latestPreview = invalidated.latestPreview;
+  latestPreviewProjectIds = invalidated.latestPreviewProjectIds;
+  webhookResult.hidden = true;
+  applyButton.hidden = true;
+  if (invalidated.wasPreviewed) status.textContent = "项目选择已变更，请重新预览。";
 }
 
 async function loadDefaults() {
@@ -146,13 +203,13 @@ async function previewWebhookChanges() {
   });
 
   try {
-    const result = await chrome.runtime.sendMessage({
-      type: "PREVIEW_WEBHOOK_CHANGES",
-      config
-    });
+    const request = buildPreviewRequest(scannedProjects, selectedProjectIds, config);
+    if (!request.ok) throw new Error(request.error);
+    const result = await chrome.runtime.sendMessage(request.message);
     if (!result?.ok) throw new Error(result?.error?.message);
 
     latestPreview = result;
+    latestPreviewProjectIds = createProjectIdSnapshot(getSelectedProjects(scannedProjects, selectedProjectIds));
     latestOrigin = result.origin;
     latestPreviewUrl = config.url;
     const view = createPreviewView(result);
@@ -181,6 +238,10 @@ scanButton.addEventListener("click", async () => {
   try {
     const result = await chrome.runtime.sendMessage({ type: "SCAN_ACTIVE_GROUP" });
     if (!result?.ok) throw new Error(result?.error?.message);
+    scannedProjects = result.data.projects;
+    selectedProjectIds = createSelectedProjectIds(scannedProjects);
+    projectControls.hidden = false;
+    previewSelectedButton.hidden = scannedProjects.length === 0;
     renderProjects(createSuccessView(result.data));
     latestOrigin = result.data.context.origin;
     addLog("扫描完成。", {
@@ -188,7 +249,6 @@ scanButton.addEventListener("click", async () => {
       manageableProjects: result.data.projects.length,
       skippedProjects: result.data.skippedProjects ?? 0
     });
-    await previewWebhookChanges();
   } catch (error) {
     const view = createErrorView(error);
     status.textContent = view.status;
@@ -199,8 +259,38 @@ scanButton.addEventListener("click", async () => {
   }
 });
 
+previewSelectedButton.addEventListener("click", previewWebhookChanges);
+
+projectSearch.addEventListener("input", renderProjectRows);
+
+selectAll.addEventListener("change", () => {
+  selectedProjectIds = selectAll.checked ? createSelectedProjectIds(scannedProjects) : new Set();
+  invalidatePreviewForSelectionChange();
+  renderProjectRows();
+});
+
+projectList.addEventListener("change", (event) => {
+  const checkbox = event.target.closest("input[data-project-id]");
+  if (!checkbox) return;
+  if (checkbox.checked) selectedProjectIds.add(checkbox.dataset.projectId);
+  else selectedProjectIds.delete(checkbox.dataset.projectId);
+  invalidatePreviewForSelectionChange();
+  updateSelectionSummary();
+});
+
 applyButton.addEventListener("click", async () => {
   if (!latestPreview) return;
+
+  const selectionValidation = validateApplySelection(
+    scannedProjects,
+    selectedProjectIds,
+    latestPreviewProjectIds
+  );
+  if (!selectionValidation.ok) {
+    status.textContent = selectionValidation.error;
+    invalidatePreviewForSelectionChange();
+    return;
+  }
 
   applyButton.disabled = true;
   const currentConfig = await loadDefaults();
