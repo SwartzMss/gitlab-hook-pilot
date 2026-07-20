@@ -17,9 +17,9 @@ export async function scanGroupUrl(rawUrl, api) {
 
   try {
     const user = await api.fetchCurrentUser(context.origin);
-    const { group, projects, skippedProjects } = await scanProjects(context, api);
+    const { group, projects } = await scanProjects(context, api);
 
-    return { ok: true, data: { context, user, group, projects, skippedProjects } };
+    return { ok: true, data: { context, user, group, projects } };
   } catch (error) {
     return {
       ok: false,
@@ -32,7 +32,7 @@ export async function scanGroupUrl(rawUrl, api) {
 }
 
 async function scanProjects(context, api) {
-  const projects = await api.fetchAllUserProjects(context.origin, fetch, {
+  const projects = await api.fetchAllUserProjects(context.origin, {
     minAccessLevel: MIN_WEBHOOK_ACCESS_LEVEL
   });
   return {
@@ -40,8 +40,7 @@ async function scanProjects(context, api) {
       name: "当前账号项目",
       full_name: `${context.origin} / 当前账号项目`
     },
-    projects,
-    skippedProjects: 0
+    projects
   };
 }
 
@@ -50,7 +49,7 @@ export function filterWebhookManageableProjects(projects) {
 }
 
 export function isWebhookManageableProject(project) {
-  if (!project?.permissions) return true;
+  if (!project?.permissions) return false;
 
   return Math.max(
     project.permissions.project_access?.access_level ?? 0,
