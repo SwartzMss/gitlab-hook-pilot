@@ -32,38 +32,16 @@ export async function scanGroupUrl(rawUrl, api) {
 }
 
 async function scanProjects(context, api) {
-  if (api.fetchAllUserProjects) {
-    const allProjects = await api.fetchAllUserProjects(context.origin);
-    const projects = filterWebhookManageableProjects(allProjects);
-    return {
-      group: {
-        name: "当前账号项目",
-        full_name: `${context.origin} / 当前账号项目`
-      },
-      projects,
-      skippedProjects: allProjects.length - projects.length
-    };
-  }
-
-  try {
-    const group = await api.fetchGroup(context.origin, context.groupPath);
-    const projects = await api.fetchAllGroupProjects(context.origin, context.groupPath);
-
-    return { group, projects, skippedProjects: 0 };
-  } catch (error) {
-    if (!context.projectPath || error.code !== "NOT_FOUND") throw error;
-
-    const project = await api.fetchProject(context.origin, context.projectPath);
-    const isManageable = isWebhookManageableProject(project);
-    return {
-      group: {
-        name: project.namespace?.full_path ?? context.groupPath,
-        full_name: project.namespace?.full_path ?? context.groupPath
-      },
-      projects: isManageable ? [project] : [],
-      skippedProjects: isManageable ? 0 : 1
-    };
-  }
+  const allProjects = await api.fetchAllUserProjects(context.origin);
+  const projects = filterWebhookManageableProjects(allProjects);
+  return {
+    group: {
+      name: "当前账号项目",
+      full_name: `${context.origin} / 当前账号项目`
+    },
+    projects,
+    skippedProjects: allProjects.length - projects.length
+  };
 }
 
 export function filterWebhookManageableProjects(projects) {

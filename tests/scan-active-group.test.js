@@ -18,46 +18,29 @@ test("rejects a page outside HTTP GitLab origins", async () => {
   });
 });
 
-test("returns the user, group, and projects for a group page", async () => {
+test("scans membership projects from a nested group page", async () => {
   const api = {
     fetchCurrentUser: async () => ({ username: "river" }),
-    fetchGroup: async () => ({ name: "Platform" }),
-    fetchAllGroupProjects: async () => [{ id: 1, name: "Runner" }]
+    fetchAllUserProjects: async () => [{
+      id: 1,
+      name: "Runner",
+      permissions: { group_access: { access_level: 40 } }
+    }],
+    fetchGroup: async () => { throw new Error("不应该读取 Group"); },
+    fetchAllGroupProjects: async () => { throw new Error("不应该按 Group 扫描"); }
   };
 
   const result = await scanGroupUrl(
-    "https://gitlab.example.com/groups/platform/-/activity",
+    "https://gitlab.example.com/groups/platform/tools/-/activity",
     api
   );
 
   assert.equal(result.ok, true);
-  assert.equal(result.data.context.groupPath, "platform");
-  assert.equal(result.data.projects.length, 1);
-});
-
-test("falls back to the current project when a project namespace is not a group", async () => {
-  const api = {
-    fetchCurrentUser: async () => ({ username: "root" }),
-    fetchGroup: async () => {
-      throw Object.assign(new Error("找不到该 Group"), { code: "NOT_FOUND" });
-    },
-    fetchAllGroupProjects: async () => {
-      throw Object.assign(new Error("找不到该 Group"), { code: "NOT_FOUND" });
-    },
-    fetchProject: async () => ({
-      id: 1,
-      name: "test",
-      namespace: { full_path: "root" },
-      permissions: { project_access: { access_level: 40 } }
-    })
-  };
-
-  const result = await scanGroupUrl("http://localhost:8929/root/test", api);
-
-  assert.equal(result.ok, true);
-  assert.equal(result.data.context.projectPath, "root/test");
-  assert.equal(result.data.projects.length, 1);
-  assert.equal(result.data.group.full_name, "root");
+  assert.deepEqual(result.data.context, {
+    origin: "https://gitlab.example.com",
+    scope: "instance"
+  });
+  assert.deepEqual(result.data.projects.map((project) => project.id), [1]);
 });
 
 test("scans membership projects from a generic GitLab page", async () => {
