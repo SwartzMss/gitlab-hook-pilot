@@ -56,7 +56,8 @@ async function previewWebhookChanges(projects, config) {
 
   log("webhook preview finished", {
     origin: preview.origin,
-    summary: preview.summary
+    summary: preview.summary,
+    projects: summarizePreviewProjects(preview.items)
   });
   return preview;
 }
@@ -97,7 +98,10 @@ async function applyWebhookChanges(items, config, origin) {
   });
 
   const result = await executeWebhookPlan(items, config, api, origin);
-  log("webhook apply finished", summarizeResult(result));
+  log("webhook apply finished", {
+    summary: result.summary,
+    projects: summarizeApplyProjects(result.items)
+  });
   return { ...result, debugLogs: operationLogs };
 }
 
@@ -200,7 +204,34 @@ function summarizeResult(result) {
     summary: result.summary,
     projectCount: result.data?.projects?.length,
     skippedProjects: result.data?.skippedProjects,
-    origin: result.data?.context?.origin
+    origin: result.data?.context?.origin,
+    projects: extractProjectNames(result.data?.projects)
+  };
+}
+
+function extractProjectNames(projects) {
+  if (!projects || projects.length === 0) return [];
+  return projects.map((p) => p.path_with_namespace ?? p.name ?? `id:${p.id}`);
+}
+
+function summarizePreviewProjects(items) {
+  if (!items || items.length === 0) return {};
+  return {
+    create: items.filter((i) => i.action === "create").map((i) => i.project.path_with_namespace ?? i.project.name),
+    update: items.filter((i) => i.action === "update").map((i) => i.project.path_with_namespace ?? i.project.name),
+    failed: items.filter((i) => i.action === "failed").map((i) => i.project.path_with_namespace ?? i.project.name)
+  };
+}
+
+function summarizeApplyProjects(items) {
+  if (!items || items.length === 0) return {};
+  return {
+    success: items.filter((i) => i.status === "create_success" || i.status === "update_success")
+      .map((i) => i.project.path_with_namespace ?? i.project.name),
+    partial: items.filter((i) => i.status === "partial_update_success")
+      .map((i) => i.project.path_with_namespace ?? i.project.name),
+    failed: items.filter((i) => i.status === "write_failed")
+      .map((i) => i.project.path_with_namespace ?? i.project.name)
   };
 }
 
