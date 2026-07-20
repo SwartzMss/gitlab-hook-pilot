@@ -1,7 +1,9 @@
 import * as gitlabApi from "../core/gitlab-api.js";
 import { scanGroupUrl } from "../core/scan-group.js";
 import { describeSelectedEvents } from "../core/webhook-config.js";
-import { buildWebhookPreview, executeWebhookPlan } from "../core/webhook-plan.js";
+import { executeWebhookPlan } from "../core/webhook-plan.js";
+import { parseGitLabGroupUrl } from "../core/gitlab-context.js";
+import { previewSelectedProjects } from "./preview-request.js";
 
 const LOG_STORAGE_KEY = "gitlabHookPilotLogs";
 const logEntries = [];
@@ -35,31 +37,26 @@ async function scanActiveGroup() {
   return result;
 }
 
-async function previewWebhookChanges(config) {
+async function previewWebhookChanges(projects, config) {
   log("webhook preview started", sanitizeConfig(config));
   const page = await getActivePage();
-  const scan = await scanGroupUrl(page?.url ?? "", gitlabApi);
-  if (!scan.ok) {
-    log("webhook preview scan failed", summarizeResult(scan));
-    return scan;
-  }
-
-  const preview = await buildWebhookPreview(
-    scan.data.projects,
+  const context = parseGitLabGroupUrl(page?.url ?? "");
+  const preview = await previewSelectedProjects({
+    projects,
     config,
-    gitlabApi,
-    scan.data.context.origin
-  );
+    api: gitlabApi,
+    origin: context?.origin ?? ""
+  });
   if (!preview.ok) {
     log("webhook preview validation failed", preview.error);
     return preview;
   }
 
   log("webhook preview finished", {
-    origin: scan.data.context.origin,
+    origin: preview.origin,
     summary: preview.summary
   });
-  return { ...preview, origin: scan.data.context.origin };
+  return preview;
 }
 
 async function applyWebhookChanges(items, config, origin) {
@@ -135,7 +132,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message?.type === "PREVIEW_WEBHOOK_CHANGES") {
-    respondWithLogging("PREVIEW_WEBHOOK_CHANGES", previewWebhookChanges(message.config), sendResponse);
+    respondWithLogging(
+      "PREVIEW_WEBHOOK_CHANGES",
+      previewWebhookChanges(message.projects ?? [], message.config),
+      sendResponse
+    );
     return true;
   }
 
