@@ -23,6 +23,11 @@ export function invalidatePreviewState(latestPreview, latestPreviewProjectIds) {
   };
 }
 
+export function isPreviewResponseCurrent(requestProjectIds, projects, selectedProjectIds) {
+  const currentIds = createProjectIdSnapshot(getSelectedProjects(projects, selectedProjectIds));
+  return projectIdSnapshotsEqual(requestProjectIds, currentIds);
+}
+
 export function validateApplySelection(projects, selectedProjectIds, previewProjectIds) {
   const selectedProjects = getSelectedProjects(projects, selectedProjectIds);
   if (selectedProjects.length === 0) return { ok: false, error: "请至少选择一个项目。" };

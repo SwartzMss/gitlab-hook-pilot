@@ -7,7 +7,7 @@ const items = [{
   action: "create"
 }];
 const payload = {
-  url: "https://hooks.example.com/gitlab",
+  url: "https://user:password@hooks.example.com/gitlab?signature=url-secret#fragment",
   token: "super-secret-token",
   note_events: true
 };
@@ -28,7 +28,11 @@ test("logs repository identity for a successful create without exposing token", 
   assert.equal(logs[0].details.project, "oxx/yy/so");
   assert.equal(logs[0].details.projectId, 12345);
   assert.equal(logs[1].details.hookId, 678);
+  assert.equal(logs[0].details.payload.url, "https://hooks.example.com/gitlab");
+  assert.equal(logs[1].details.payload.url, "https://hooks.example.com/gitlab");
   assert.equal(JSON.stringify(logs).includes("super-secret-token"), false);
+  assert.equal(JSON.stringify(logs).includes("url-secret"), false);
+  assert.equal(JSON.stringify(logs).includes("password"), false);
 });
 
 test("logs repository, hook, status, and error for a failed update", async () => {
@@ -51,6 +55,7 @@ test("logs repository, hook, status, and error for a failed update", async () =>
   assert.equal(logs[1].details.hookId, 20002);
   assert.equal(logs[1].details.status, 403);
   assert.equal(logs[1].details.error, "没有权限");
+  assert.equal(logs[1].details.payload.url, "https://hooks.example.com/gitlab");
   assert.equal(JSON.stringify(logs).includes("super-secret-token"), false);
 });
 

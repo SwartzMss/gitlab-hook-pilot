@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   buildPreviewRequest,
   invalidatePreviewState,
+  isPreviewResponseCurrent,
   validateApplySelection
 } from "../src/popup/popup-selection-flow.js";
 
@@ -17,6 +18,11 @@ test("builds a preview request from only selected projects", () => {
       config: { url: "https://hooks.test" }
     }
   });
+});
+
+test("rejects a preview response when selection changed while loading", () => {
+  assert.equal(isPreviewResponseCurrent(["1", "2"], projects, new Set(["1"])), false);
+  assert.equal(isPreviewResponseCurrent(["1", "2"], projects, new Set(["1", "2"])), true);
 });
 
 test("rejects preview when no project is selected", () => {

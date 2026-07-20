@@ -5,6 +5,7 @@ import { executeWebhookPlan } from "../core/webhook-plan.js";
 import { parseGitLabGroupUrl } from "../core/gitlab-context.js";
 import { previewSelectedProjects } from "./preview-request.js";
 import { createWebhookOperationApi } from "./webhook-operation-api.js";
+import { sanitizeWebhookUrl } from "../core/log-sanitizer.js";
 
 const LOG_STORAGE_KEY = "gitlabHookPilotLogs";
 const logEntries = [];
@@ -205,7 +206,7 @@ function summarizeResult(result) {
 
 function sanitizeConfig(config = {}) {
   return {
-    url: config.url,
+    url: sanitizeWebhookUrl(config.url),
     hasToken: Boolean(config.token),
     events: describeSelectedEvents(config.events),
     enableSslVerification: config.enableSslVerification

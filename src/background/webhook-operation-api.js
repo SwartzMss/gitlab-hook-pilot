@@ -1,3 +1,5 @@
+import { sanitizeWebhookUrl } from "../core/log-sanitizer.js";
+
 export function createWebhookOperationApi({
   items = [],
   csrfToken = "",
@@ -23,12 +25,16 @@ export function createWebhookOperationApi({
       try {
         const hook = await api.createProjectHook(origin, projectId, payload, fetchImpl, csrfToken);
         logOperation("create hook success", {
-          origin, ...projectDetails(projectId), hookId: hook?.id
+          origin, ...projectDetails(projectId), hookId: hook?.id, payload: sanitizePayload(payload)
         });
         return hook;
       } catch (error) {
         logOperation("create hook failed", {
-          origin, ...projectDetails(projectId), status: error?.status, error: error?.message ?? "unknown error"
+          origin,
+          ...projectDetails(projectId),
+          status: error?.status,
+          error: error?.message ?? "unknown error",
+          payload: sanitizePayload(payload)
         });
         throw error;
       }
@@ -43,7 +49,10 @@ export function createWebhookOperationApi({
           origin, projectId, hookId, payload, fetchImpl, csrfToken
         );
         logOperation("update hook success", {
-          origin, ...projectDetails(projectId), hookId: hook?.id ?? hookId
+          origin,
+          ...projectDetails(projectId),
+          hookId: hook?.id ?? hookId,
+          payload: sanitizePayload(payload)
         });
         return hook;
       } catch (error) {
@@ -52,7 +61,8 @@ export function createWebhookOperationApi({
           ...projectDetails(projectId),
           hookId,
           status: error?.status,
-          error: error?.message ?? "unknown error"
+          error: error?.message ?? "unknown error",
+          payload: sanitizePayload(payload)
         });
         throw error;
       }
@@ -62,7 +72,7 @@ export function createWebhookOperationApi({
 
 export function sanitizePayload(payload = {}) {
   return {
-    url: payload.url,
+    url: sanitizeWebhookUrl(payload.url),
     hasToken: Boolean(payload.token),
     events: {
       note_events: payload.note_events,

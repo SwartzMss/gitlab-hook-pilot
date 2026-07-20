@@ -5,17 +5,18 @@ import {
   createSuccessView
 } from "./popup-view.js";
 import { describeSelectedEvents } from "../core/webhook-config.js";
+import { sanitizeWebhookUrl } from "../core/log-sanitizer.js";
 import {
   createProjectIdSnapshot,
   createSelectedProjectIds,
   filterProjects,
   getProjectLabel,
-  getSelectedProjects,
   getSelectionState
 } from "./project-selection.js";
 import {
   buildPreviewRequest,
   invalidatePreviewState,
+  isPreviewResponseCurrent,
   validateApplySelection
 } from "./popup-selection-flow.js";
 
@@ -46,12 +47,14 @@ let latestPreviewUrl = "";
 let scannedProjects = [];
 let selectedProjectIds = new Set();
 let latestPreviewProjectIds = [];
+let previewRequestGeneration = 0;
 const logEntries = [];
 
 loadDefaults();
 addLog("Popup 已打开。");
 
 function resetResults() {
+  previewRequestGeneration += 1;
   summary.hidden = true;
   projectList.replaceChildren();
   scannedProjects = [];
@@ -116,6 +119,7 @@ function updateSelectionSummary() {
 }
 
 function invalidatePreviewForSelectionChange() {
+  previewRequestGeneration += 1;
   const invalidated = invalidatePreviewState(latestPreview, latestPreviewProjectIds);
   latestPreview = invalidated.latestPreview;
   latestPreviewProjectIds = invalidated.latestPreviewProjectIds;
@@ -203,18 +207,26 @@ async function previewWebhookChanges() {
 
   status.textContent = "正在读取各项目已有 Webhook…";
   addLog("开始自动预览 Webhook 变更。", {
-    url: config.url,
+    url: sanitizeWebhookUrl(config.url),
     events: describeSelectedEvents(config.events),
     ssl: false,
     hasToken: Boolean(config.token)
   });
 
   try {
+    const requestProjectIds = createProjectIdSnapshot(request.message.projects);
+    const requestGeneration = ++previewRequestGeneration;
     const result = await chrome.runtime.sendMessage(request.message);
     if (!result?.ok) throw new Error(result?.error?.message);
+    if (
+      requestGeneration !== previewRequestGeneration ||
+      !isPreviewResponseCurrent(requestProjectIds, scannedProjects, selectedProjectIds)
+    ) {
+      throw new Error("项目选择已变更，请重新预览。");
+    }
 
     latestPreview = result;
-    latestPreviewProjectIds = createProjectIdSnapshot(getSelectedProjects(scannedProjects, selectedProjectIds));
+    latestPreviewProjectIds = requestProjectIds;
     latestOrigin = result.origin;
     latestPreviewUrl = config.url;
     const view = createPreviewView(result);
@@ -313,8 +325,8 @@ applyButton.addEventListener("click", async () => {
   if (currentConfig.url !== latestPreviewUrl) {
     status.textContent = "Webhook URL 已变更，请重新检查后再执行。";
     addLog("执行前发现 Webhook URL 已变更，已停止写入。", {
-      previewUrl: latestPreviewUrl,
-      currentUrl: currentConfig.url
+      previewUrl: sanitizeWebhookUrl(latestPreviewUrl),
+      currentUrl: sanitizeWebhookUrl(currentConfig.url)
     });
     applyButton.disabled = false;
     return;
