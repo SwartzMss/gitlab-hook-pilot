@@ -87,8 +87,9 @@ export async function fetchAllGroupProjects(origin, groupPath, fetchImpl = fetch
   return projects;
 }
 
-export async function fetchAllUserProjects(origin, fetchImpl = fetch, options = {}) {
+export async function fetchAllUserProjects(origin, options = {}) {
   const projects = [];
+  const fetchImpl = options.fetchImpl ?? fetch;
   let page = "1";
 
   do {
