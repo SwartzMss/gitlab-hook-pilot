@@ -203,7 +203,6 @@ function summarizeResult(result) {
     ok: true,
     summary: result.summary,
     projectCount: result.data?.projects?.length,
-    skippedProjects: result.data?.skippedProjects,
     origin: result.data?.context?.origin,
     projects: extractProjectNames(result.data?.projects)
   };
